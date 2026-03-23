@@ -1,0 +1,72 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+#slide-deck {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.slide.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Title slides */
+.title-slide {
+  background: #000;
+}
+
+.title-slide h1 {
+  color: #fff;
+  font-size: clamp(2rem, 6vw, 5rem);
+  font-weight: 700;
+  text-align: center;
+  padding: 2rem;
+  line-height: 1.2;
+}
+
+/* Video slides */
+.video-slide {
+  background: #000;
+}
+
+.video-slide video {
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+}
+
+/* Slide counter */
+#slide-counter {
+  position: fixed;
+  bottom: 1rem;
+  right: 1.5rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.875rem;
+  font-family: monospace;
+  z-index: 100;
+  pointer-events: none;
+}
