@@ -34,14 +34,14 @@ function goToSlide(index) {
   if (index >= slides.length) index = 0;
   if (index < 0) index = slides.length - 1;
 
-  // Pause any playing video on the current slide
+  // Pause any playing video
   const currentVideo = slides[current].querySelector('video');
   if (currentVideo) {
     currentVideo.pause();
     currentVideo.currentTime = 0;
   }
 
-  // Reset overlay on current slide
+  // Reset overlay
   const currentOverlay = slides[current].querySelector('.overlay-title');
   if (currentOverlay) {
     currentOverlay.classList.remove('hidden');
@@ -55,7 +55,6 @@ function goToSlide(index) {
   history.replaceState(null, '', `#slide${current + 1}`);
   updateCounter();
 
-  // Show overlay, start video, fade overlay after 3 seconds
   const video = slides[current].querySelector('video');
   const overlay = slides[current].querySelector('.overlay-title');
 
@@ -109,11 +108,24 @@ document.querySelectorAll('.video-slide').forEach((slide) => {
   });
 });
 
+// Click/tap to pause-unpause current slide
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#slide-nav') || e.target.closest('.progress-bar')) return;
+
+  const video = slides[current].querySelector('video');
+  if (video) {
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }
+});
+
 // Keyboard navigation
 document.addEventListener('keydown', (e) => {
   switch (e.key) {
     case 'ArrowRight':
-    case ' ':
       e.preventDefault();
       nextSlide();
       break;
@@ -121,36 +133,59 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       prevSlide();
       break;
+    case ' ':
+      e.preventDefault();
+      const video = slides[current].querySelector('video');
+      if (video) {
+        if (video.paused) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      }
+      break;
   }
 });
 
 // Touch swipe support
 let touchStartX = 0;
 let touchStartY = 0;
+let touchStartTime = 0;
 
 document.addEventListener('touchstart', (e) => {
   touchStartX = e.changedTouches[0].screenX;
   touchStartY = e.changedTouches[0].screenY;
+  touchStartTime = Date.now();
 }, { passive: true });
 
 document.addEventListener('touchend', (e) => {
   const dx = e.changedTouches[0].screenX - touchStartX;
   const dy = e.changedTouches[0].screenY - touchStartY;
+  const dt = Date.now() - touchStartTime;
 
-  // Only register horizontal swipes (ignore vertical scrolls)
-  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+  // Horizontal swipe to navigate
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+    if (dx < 0) {
+      nextSlide();
+    } else {
+      prevSlide();
+    }
+    return;
+  }
 
-  if (dx < 0) {
-    nextSlide();
-  } else {
-    prevSlide();
+  // Short tap = pause/unpause
+  if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && dt < 300) {
+    if (e.target.closest('#slide-nav') || e.target.closest('.progress-bar')) return;
+    const video = slides[current].querySelector('video');
+    if (video) {
+      if (video.paused) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    }
   }
 }, { passive: true });
-
-// Click/tap to advance
-document.addEventListener('click', () => {
-  nextSlide();
-});
 
 // Load slide from URL hash on init
 const hashMatch = location.hash.match(/^#slide(\d+)$/);
@@ -160,7 +195,6 @@ if (hashMatch) {
     goToSlide(idx);
   }
 } else {
-  // Show overlay on first slide, then play video
   const firstOverlay = slides[0].querySelector('.overlay-title');
   const firstVideo = slides[0].querySelector('video');
   if (firstOverlay) {
