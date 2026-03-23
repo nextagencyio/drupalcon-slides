@@ -1,10 +1,32 @@
 const slides = document.querySelectorAll('.slide');
 const counter = document.getElementById('slide-counter');
 let current = 0;
-let titleTimer = null;
+let overlayTimer = null;
+
+// Build nav dots
+const nav = document.getElementById('slide-nav');
+const navButtons = [];
+slides.forEach((slide, i) => {
+  const btn = document.createElement('button');
+  btn.textContent = i + 1;
+  btn.title = slide.querySelector('.overlay-title')?.textContent || `Slide ${i + 1}`;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    goToSlide(i);
+  });
+  nav.appendChild(btn);
+  navButtons.push(btn);
+});
+
+function updateNav() {
+  navButtons.forEach((btn, i) => {
+    btn.classList.toggle('active', i === current);
+  });
+}
 
 function updateCounter() {
   counter.textContent = `${current + 1} / ${slides.length}`;
+  updateNav();
 }
 
 function goToSlide(index) {
@@ -19,25 +41,38 @@ function goToSlide(index) {
     currentVideo.currentTime = 0;
   }
 
+  // Reset overlay on current slide
+  const currentOverlay = slides[current].querySelector('.overlay-title');
+  if (currentOverlay) {
+    currentOverlay.classList.remove('hidden');
+  }
+
+  clearTimeout(overlayTimer);
+
   slides[current].classList.remove('active');
   current = index;
   slides[current].classList.add('active');
   history.replaceState(null, '', `#slide${current + 1}`);
   updateCounter();
 
-  // Clear any pending title timer
-  clearTimeout(titleTimer);
-
-  // If the new slide has a video, autoplay it
+  // Show overlay, start video, fade overlay after 3 seconds
   const video = slides[current].querySelector('video');
+  const overlay = slides[current].querySelector('.overlay-title');
+
   if (video) {
     video.currentTime = 0;
-    video.play().catch(() => {});
   }
 
-  // Auto-advance title slides after 3 seconds
-  if (slides[current].dataset.type === 'title') {
-    titleTimer = setTimeout(nextSlide, 3000);
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    overlayTimer = setTimeout(() => {
+      overlay.classList.add('hidden');
+      if (video) {
+        video.play().catch(() => {});
+      }
+    }, 3000);
+  } else if (video) {
+    video.play().catch(() => {});
   }
 }
 
@@ -49,10 +84,28 @@ function prevSlide() {
   goToSlide(current - 1);
 }
 
-// Auto-advance when video ends
-document.querySelectorAll('.video-slide video').forEach((video) => {
+// Auto-advance when video ends + progress bar updates
+document.querySelectorAll('.video-slide').forEach((slide) => {
+  const video = slide.querySelector('video');
+  const fill = slide.querySelector('.progress-fill');
+  const bar = slide.querySelector('.progress-bar');
+
   video.addEventListener('ended', () => {
     nextSlide();
+  });
+
+  video.addEventListener('timeupdate', () => {
+    if (video.duration) {
+      fill.style.width = `${(video.currentTime / video.duration) * 100}%`;
+    }
+  });
+
+  // Click on progress bar to seek
+  bar.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const rect = bar.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    video.currentTime = ratio * video.duration;
   });
 });
 
@@ -94,7 +147,7 @@ document.addEventListener('touchend', (e) => {
   }
 }, { passive: true });
 
-// Click/tap to advance (only non-swipe taps)
+// Click/tap to advance
 document.addEventListener('click', () => {
   nextSlide();
 });
@@ -105,6 +158,18 @@ if (hashMatch) {
   const idx = parseInt(hashMatch[1], 10) - 1;
   if (idx >= 0 && idx < slides.length) {
     goToSlide(idx);
+  }
+} else {
+  // Show overlay on first slide, then play video
+  const firstOverlay = slides[0].querySelector('.overlay-title');
+  const firstVideo = slides[0].querySelector('video');
+  if (firstOverlay) {
+    overlayTimer = setTimeout(() => {
+      firstOverlay.classList.add('hidden');
+      if (firstVideo) {
+        firstVideo.play().catch(() => {});
+      }
+    }, 3000);
   }
 }
 
